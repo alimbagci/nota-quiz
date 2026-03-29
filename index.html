@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nota Tanıma Quiz</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f5f0; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 1rem; }
+  #app { width: 100%; max-width: 520px; background: #fff; border-radius: 16px; padding: 1.5rem; box-shadow: 0 2px 16px rgba(0,0,0,0.08); margin: 1rem auto; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  h1 { font-size: 22px; font-weight: 600; color: #111; text-align: center; margin-bottom: 0.3rem; }
+  .sub { font-size: 14px; color: #666; text-align: center; margin-bottom: 1rem; }
+  .ref-wrap { background: #f8f8f5; border-radius: 12px; padding: 0.75rem 0.4rem 0.6rem; margin-bottom: 1.2rem; overflow-x: auto; }
+  .mode-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 1.2rem; }
+  .mode-card { border: 1.5px solid #ddd; border-radius: 10px; padding: 0.85rem 0.4rem; text-align: center; cursor: pointer; background: #fff; transition: all 0.15s; }
+  .mode-card:hover { background: #f0f4ff; border-color: #4a7fd4; }
+  .mode-card.selected { border: 2px solid #4a7fd4; background: #e8f0ff; }
+  .mode-name { font-size: 15px; font-weight: 600; color: #111; margin-bottom: 3px; }
+  .mode-info { font-size: 11px; color: #666; line-height: 1.5; }
+  .btn-primary { display: block; width: 100%; padding: 12px; font-size: 16px; font-weight: 600; border-radius: 10px; border: none; cursor: pointer; background: #4a7fd4; color: #fff; transition: opacity 0.15s; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:disabled { opacity: 0.35; cursor: default; }
+  .btn-sec { display: inline-block; padding: 10px 2rem; font-size: 15px; border-radius: 10px; border: 1.5px solid #ddd; cursor: pointer; background: #fff; color: #111; margin-top: 0.75rem; transition: background 0.12s; }
+  .btn-sec:hover { background: #f5f5f0; }
+  .lb-section { margin-top: 1.5rem; }
+  .lb-title { font-size: 15px; font-weight: 600; text-align: center; margin-bottom: 0.5rem; color: #111; }
+  .lb-tabs { display: flex; gap: 5px; margin-bottom: 0.5rem; }
+  .lb-tab { flex:1; padding:6px; font-size:13px; text-align:center; border:1.5px solid #ddd; border-radius:8px; cursor:pointer; background:#fff; color:#666; transition: all 0.12s; }
+  .lb-tab.active { background:#4a7fd4; color:#fff; border-color:#4a7fd4; }
+  .lb-row { display:flex; justify-content:space-between; padding:5px 10px; border-radius:6px; font-size:13px; }
+  .lb-row:nth-child(odd) { background:#f8f8f5; }
+  .lb-empty { color:#aaa; font-size:13px; padding:8px; text-align:center; }
+  .game-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; }
+  .stat-box { text-align:center; }
+  .stat-label { font-size:11px; color:#888; }
+  .stat-val { font-size:24px; font-weight:700; color:#111; }
+  .timer-wrap { position:relative; width:56px; height:56px; }
+  .timer-wrap svg { position:absolute; top:0; left:0; transform:rotate(-90deg); }
+  .timer-num { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:18px; font-weight:700; color:#111; }
+  .lives-row { display:flex; gap:3px; justify-content:center; margin-top:3px; flex-wrap:wrap; max-width:90px; }
+  .staff-wrap { display:flex; justify-content:center; margin-bottom:1rem; }
+  .ans-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .ans-btn { padding:10px 0; font-size:13px; font-weight:600; border:1.5px solid #ddd; border-radius:8px; cursor:pointer; background:#fff; color:#111; transition:all 0.12s; }
+  .ans-btn:hover:not(:disabled) { background:#f0f4ff; border-color:#4a7fd4; }
+  .ans-btn.correct { background:#2e7d32 !important; color:#fff !important; border-color:#2e7d32 !important; }
+  .ans-btn.wrong { background:#c62828 !important; color:#fff !important; border-color:#c62828 !important; }
+  .q-label { text-align:center; font-size:12px; color:#888; margin-top:6px; }
+  .result-wrap { text-align:center; padding:1.5rem 0; }
+  .result-score { font-size:56px; font-weight:700; color:#4a7fd4; margin:0.75rem 0 0.25rem; }
+  .result-sub { font-size:14px; color:#666; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ANA EKRAN -->
+  <div id="home" class="screen active">
+    <h1>🎵 Nota Tanıma Quiz</h1>
+    <p class="sub">Portedeki notanın adını bul!</p>
+    <div class="ref-wrap">
+      <svg id="ref-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="160" viewBox="0 0 860 160" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="mode-grid">
+      <div class="mode-card" data-mode="easy">
+        <div class="mode-name">😊 Kolay</div>
+        <div class="mode-info">10 saniye<br>5 hata hakkı</div>
+      </div>
+      <div class="mode-card" data-mode="medium">
+        <div class="mode-name">😤 Orta</div>
+        <div class="mode-info">5 saniye<br>3 hata hakkı</div>
+      </div>
+      <div class="mode-card" data-mode="hard">
+        <div class="mode-name">🔥 Zor</div>
+        <div class="mode-info">3 saniye<br>1 hata hakkı</div>
+      </div>
+    </div>
+    <button class="btn-primary" id="btn-start" disabled>Oyunu Başlat</button>
+    <div class="lb-section">
+      <div class="lb-title">🏆 Skor Tablosu</div>
+      <div class="lb-tabs">
+        <div class="lb-tab active" data-lb="easy">Kolay</div>
+        <div class="lb-tab" data-lb="medium">Orta</div>
+        <div class="lb-tab" data-lb="hard">Zor</div>
+      </div>
+      <div id="lb-content"></div>
+    </div>
+  </div>
+
+  <!-- OYUN EKRANI -->
+  <div id="game" class="screen">
+    <div class="game-header">
+      <div class="stat-box">
+        <div class="stat-label">Doğru</div>
+        <div class="stat-val" id="score-val">0</div>
+      </div>
+      <div class="timer-wrap">
+        <svg width="56" height="56" viewBox="0 0 56 56">
+          <circle cx="28" cy="28" r="24" fill="none" stroke="#eee" stroke-width="4"/>
+          <circle id="t-arc" cx="28" cy="28" r="24" fill="none" stroke="#4a7fd4" stroke-width="4" stroke-dasharray="150.8" stroke-dashoffset="0" stroke-linecap="round"/>
+        </svg>
+        <div class="timer-num" id="t-num">10</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Hata hakkı</div>
+        <div class="lives-row" id="lives-row"></div>
+      </div>
+    </div>
+    <div class="staff-wrap">
+      <svg id="game-svg" width="280" height="240" viewBox="0 0 280 240" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="ans-grid" id="ans-grid"></div>
+    <div class="q-label" id="q-label">Soru 1</div>
+  </div>
+
+  <!-- SONUÇ EKRANI -->
+  <div id="result" class="screen result-wrap">
+    <h1>Oyun Bitti! 🎉</h1>
+    <div class="result-score" id="res-score">0</div>
+    <div class="result-sub" id="res-sub"></div>
+    <button class="btn-sec" id="btn-home">Ana Ekrana Dön</button>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// Sol anahtarı: L1=Mi3, L2=Sol3, L3=Si3, L4=Re4, L5=Fa4
+// Her yarım adım = 10px (game), 6px (ref)
+// BASE_Y (game) = 155 = Mi3 = L1
+// ============================================================
+
+const S = 10;   // game half-step px
+const B = 155;  // Mi3 = L1 y koordinatı
+function gy(hs) { return B + hs * S; }
+
+// 21 benzersiz nota pozisyonu (Re2'den Do5'e)
+const NOTES = [
+  { name:'Re',  y:gy(8),   leds:[gy(6),gy(4),gy(2)] },  // Re2
+  { name:'Mi',  y:gy(7),   leds:[gy(6),gy(4),gy(2)] },  // Mi2
+  { name:'Fa',  y:gy(6),   leds:[gy(6),gy(4),gy(2)] },  // Fa2
+  { name:'Sol', y:gy(5),   leds:[gy(4),gy(2)]        },  // Sol2
+  { name:'La',  y:gy(4),   leds:[gy(4),gy(2)]        },  // La2
+  { name:'Si',  y:gy(3),   leds:[gy(2)]               },  // Si2
+  { name:'Do',  y:gy(2),   leds:[gy(2)]               },  // Do3
+  { name:'Re',  y:gy(1),   leds:[]                    },  // Re3
+  { name:'Mi',  y:gy(0),   leds:[]                    },  // Mi3 = L1
+  { name:'Fa',  y:gy(-1),  leds:[]                    },  // Fa3
+  { name:'Sol', y:gy(-2),  leds:[]                    },  // Sol3 = L2
+  { name:'La',  y:gy(-3),  leds:[]                    },  // La3
+  { name:'Si',  y:gy(-4),  leds:[]                    },  // Si3 = L3
+  { name:'Do',  y:gy(-5),  leds:[]                    },  // Do4
+  { name:'Re',  y:gy(-6),  leds:[]                    },  // Re4 = L4
+  { name:'Mi',  y:gy(-7),  leds:[]                    },  // Mi4
+  { name:'Fa',  y:gy(-8),  leds:[]                    },  // Fa4 = L5
+  { name:'Sol', y:gy(-9),  leds:[]                    },  // Sol4
+  { name:'La',  y:gy(-10), leds:[gy(-10)]             },  // La4
+  { name:'Si',  y:gy(-11), leds:[gy(-10)]             },  // Si4
+  { name:'Do',  y:gy(-12), leds:[gy(-10),gy(-12)]     },  // Do5
+];
+
+// Game porte çizgileri L1..L5
+const GL = [gy(0), gy(-2), gy(-4), gy(-6), gy(-8)];
+
+const MODES = {
+  easy:   { label:'Kolay', time:10, lives:5 },
+  medium: { label:'Orta',  time:5,  lives:3 },
+  hard:   { label:'Zor',   time:3,  lives:1 },
+};
+
+let selMode=null, curNote=null, score=0, lives=0, maxLives=0;
+let totalTime=0, timeLeft=0, tInterval=null, answered=false, qNum=0;
+
+// ---- REF SVG ----
+function drawRefSvg() {
+  const svg = document.getElementById('ref-svg');
+  const RS = 6, refB = 105;
+  function ry(hs) { return refB + hs * RS; }
+  const refGL = [ry(0), ry(-2), ry(-4), ry(-6), ry(-8)];
+  const lx1 = 52, lx2 = 856;
+  const spacing = (lx2 - lx1) / (NOTES.length - 1);
+  let h = '';
+
+  refGL.forEach(y => {
+    h += `<line x1="${lx1-2}" y1="${y}" x2="${lx2+2}" y2="${y}" stroke="#333" stroke-width="1.1"/>`;
+  });
+
+  // Sol anahtarı
+  h += `<text x="4" y="${refGL[0]+14}" font-size="76" font-family="Georgia,serif" fill="#333">&#119070;</text>`;
+
+  NOTES.forEach((note, i) => {
+    const nx = Math.round(lx1 + i * spacing);
+    const hs = (note.y - B) / S;
+    const ny = Math.round(ry(hs));
+
+    note.leds.forEach(ly => {
+      const rly = Math.round(ry((ly - B) / S));
+      h += `<line x1="${nx-9}" y1="${rly}" x2="${nx+9}" y2="${rly}" stroke="#333" stroke-width="1.1"/>`;
+    });
+
+    // Açık nota başı (semibreve)
+    h += `<ellipse cx="${nx}" cy="${ny}" rx="5.5" ry="3.8" fill="none" stroke="#333" stroke-width="1.5" transform="rotate(-15,${nx},${ny})"/>`;
+
+    // İsim etiketi
+    h += `<text x="${nx}" y="${refGL[0]+26}" text-anchor="middle" font-size="9.5" fill="#666" font-family="system-ui,sans-serif">${note.name}</text>`;
+  });
+
+  svg.innerHTML = h;
+}
+
+// ---- GAME SVG ----
+function drawGameNote(note) {
+  const svg = document.getElementById('game-svg');
+  const NX = 140;
+  let h = '';
+
+  GL.forEach(y => {
+    h += `<line x1="34" y1="${y}" x2="246" y2="${y}" stroke="#333" stroke-width="1.5"/>`;
+  });
+
+  // Sol anahtarı
+  h += `<text x="5" y="${GL[0]+18}" font-size="96" font-family="Georgia,serif" fill="#333">&#119070;</text>`;
+
+  note.leds.forEach(ly => {
+    h += `<line x1="${NX-17}" y1="${ly}" x2="${NX+17}" y2="${ly}" stroke="#333" stroke-width="1.5"/>`;
+  });
+
+  // Açık nota başı (semibreve)
+  h += `<ellipse cx="${NX}" cy="${note.y}" rx="13" ry="9" fill="none" stroke="#333" stroke-width="2.4" transform="rotate(-15,${NX},${note.y})"/>`;
+
+  svg.innerHTML = h;
+}
+
+function renderLives() {
+  const el = document.getElementById('lives-row');
+  el.innerHTML = '';
+  for (let i = 0; i < maxLives; i++) {
+    const s = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    s.setAttribute('width','18'); s.setAttribute('height','18'); s.setAttribute('viewBox','0 0 20 20');
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d','M10 17s-7-4.35-7-9a4 4 0 0 1 7-2.65A4 4 0 0 1 17 8c0 4.65-7 9-7 9z');
+    p.setAttribute('fill', i < lives ? '#e53935' : '#ddd');
+    s.appendChild(p); el.appendChild(s);
+  }
+}
+
+function startTimer() {
+  timeLeft = totalTime; updateTimerUI();
+  tInterval = setInterval(() => {
+    timeLeft--; updateTimerUI();
+    if (timeLeft <= 0) { clearInterval(tInterval); onTimeout(); }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  document.getElementById('t-num').textContent = timeLeft;
+  const circ = 2 * Math.PI * 24;
+  document.getElementById('t-arc').setAttribute('stroke-dashoffset', circ * (1 - timeLeft / totalTime));
+  const col = timeLeft <= 2 ? '#e53935' : timeLeft <= Math.ceil(totalTime/2) ? '#ef6c00' : '#4a7fd4';
+  document.getElementById('t-arc').setAttribute('stroke', col);
+}
+
+function onTimeout() { if (answered) return; answered = true; revealAnswer(null); loseLife(); }
+
+function revealAnswer(chosen) {
+  document.querySelectorAll('.ans-btn').forEach(b => {
+    b.disabled = true;
+    if (b.dataset.n === curNote.name) b.classList.add('correct');
+    else if (chosen && b.dataset.n === chosen) b.classList.add('wrong');
+  });
+}
+
+function loseLife() {
+  lives--; renderLives();
+  setTimeout(() => { lives <= 0 ? endGame() : nextQ(); }, 950);
+}
+
+function nextQ() {
+  answered = false; qNum++;
+  document.getElementById('q-label').textContent = 'Soru ' + qNum;
+  curNote = NOTES[Math.floor(Math.random() * NOTES.length)];
+  drawGameNote(curNote); buildGrid(); startTimer();
+}
+
+function buildGrid() {
+  const g = document.getElementById('ans-grid'); g.innerHTML = '';
+  ['Do','Re','Mi','Fa','Sol','La','Si'].forEach(name => {
+    const b = document.createElement('button');
+    b.className = 'ans-btn'; b.textContent = name; b.dataset.n = name;
+    b.addEventListener('click', () => {
+      if (answered) return;
+      clearInterval(tInterval); answered = true;
+      if (name === curNote.name) {
+        score++; document.getElementById('score-val').textContent = score;
+        b.classList.add('correct'); setTimeout(nextQ, 600);
+      } else { revealAnswer(name); loseLife(); }
+    });
+    g.appendChild(b);
+  });
+}
+
+function endGame() {
+  clearInterval(tInterval); saveScore(selMode, score);
+  document.getElementById('res-score').textContent = score;
+  document.getElementById('res-sub').textContent = MODES[selMode].label + ' modunda ' + score + ' doğru cevap';
+  showScreen('result');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function getScores(m) { try { return JSON.parse(localStorage.getItem('nq5_'+m) || '[]'); } catch(e) { return []; } }
+function saveScore(m, s) {
+  const a = getScores(m); a.push(s); a.sort((x,y) => y-x);
+  try { localStorage.setItem('nq5_'+m, JSON.stringify(a.slice(0,5))); } catch(e) {}
+}
+
+function renderLB(mode) {
+  const s = getScores(mode), el = document.getElementById('lb-content');
+  if (!s.length) { el.innerHTML = '<div class="lb-empty">Henüz skor yok</div>'; return; }
+  el.innerHTML = s.map((v,i) =>
+    `<div class="lb-row"><span style="color:#888">${i+1}.</span><span style="font-weight:600;color:#111">${v} doğru</span></div>`
+  ).join('');
+}
+
+// Event listeners
+document.querySelectorAll('.mode-card').forEach(c => c.addEventListener('click', () => {
+  document.querySelectorAll('.mode-card').forEach(x => x.classList.remove('selected'));
+  c.classList.add('selected'); selMode = c.dataset.mode;
+  document.getElementById('btn-start').disabled = false;
+}));
+
+document.getElementById('btn-start').addEventListener('click', () => {
+  if (!selMode) return;
+  const m = MODES[selMode]; score=0; lives=m.lives; maxLives=m.lives; totalTime=m.time; qNum=0;
+  document.getElementById('score-val').textContent = '0';
+  showScreen('game'); renderLives(); nextQ();
+});
+
+document.getElementById('btn-home').addEventListener('click', () => {
+  clearInterval(tInterval); showScreen('home');
+  renderLB(document.querySelector('.lb-tab.active').dataset.lb);
+});
+
+document.querySelectorAll('.lb-tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.lb-tab').forEach(x => x.classList.remove('active'));
+  t.classList.add('active'); renderLB(t.dataset.lb);
+}));
+
+drawRefSvg();
+renderLB('easy');
+</script>
+</body>
+</html>
